@@ -1,0 +1,54 @@
+[
+ {
+  "directory": "C:\\Users\\Marc\\Desktop\\Notes\\Projects\\project\\merged",
+  "arguments": [
+   "gcc",
+   "-c",
+   "-o",
+   "server.o",
+   "server.c"
+  ],
+  "file": "server.c"
+ },
+ {
+  "directory": "C:\\Users\\Marc\\Desktop\\Notes\\Projects\\project\\merged",
+  "arguments": [
+   "gcc",
+   "-c",
+   "-o",
+   "client.o",
+   "client.c"
+  ],
+  "file": "client.c"
+ },
+ {
+  "directory": "C:\\Users\\Marc\\Desktop\\Notes\\Projects\\project\\merged",
+  "arguments": [
+   "gcc",
+   "-c",
+   "ui.c",
+   "-o",
+   "ui.o",
+   "-lncurses",
+   "-DNCURSES_STATIC"
+  ],
+  "file": "ui.c"
+ },
+ {
+  "directory": "C:\\Users\\Marc\\Desktop\\Notes\\Projects\\project\\merged",
+  "arguments": [
+   "gcc",
+   "main.c",
+   "-o",
+   "app",
+   "server.o",
+   "client.o",
+   "ui.o",
+   "-lpthread",
+   "-lncurses",
+   "-DNCURSES_STATIC",
+   "-lws2_32"
+  ],
+  "file": "main.c"
+ }
+]
