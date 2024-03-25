@@ -53,6 +53,26 @@ void sendBroadcast() {
     log_message(log_buf);
 }
 
+void updateChatBox(MessageList* clientMessages, WINDOW* chatWindow) {
+    // Display all messages
+    pthread_mutex_lock(&clientMessages->mutex);
+
+    ListNode* temp = clientMessages->head;
+
+    int i = 1;
+    while (temp != NULL) {
+        //TODO: Message stuff here
+        Message current_message = temp->message;
+        char* displayMessage = current_message.message;
+        mvwprintw(chatWindow, i, 1, "%s", displayMessage);
+
+        temp = temp->next;
+        i++;
+    }
+    wrefresh(chatWindow);
+
+    pthread_mutex_unlock(&clientMessages->mutex);
+}
 
 void* startUI(void* _clientMessages) {
     MessageList *clientMessages = (MessageList*)_clientMessages;
@@ -134,13 +154,16 @@ void* startUI(void* _clientMessages) {
                 log_message("Displaying Messages...");
                 message_count = (message_count + 1) % MAX_MESSAGES; // Ensure we don't go out of bounds
                 // Display all messages
-                for (int j = 0; j < message_count; j++) {
-                    mvwprintw(msg_win, j + 1, 1, "%s", messages[j]);
-                }
+                /* for (int j = 0; j < message_count; j++) { */
+                /*     mvwprintw(msg_win, j + 1, 1, "%s", messages[j]); */
+                /* } */
+                pthread_mutex_unlock(&clientMessages->mutex);
+                updateChatBox(clientMessages, msg_win);
+                pthread_mutex_lock(&clientMessages->mutex);
                 lastMessageRead++;
             }
             pthread_mutex_unlock(&clientMessages->mutex);
-            wrefresh(msg_win);
+            /* wrefresh(msg_win); */
 
         } else if (ch == KEY_F(10)) {
             sendBroadcast();
@@ -177,10 +200,12 @@ void* startUI(void* _clientMessages) {
                 message_count = (message_count + 1) % MAX_MESSAGES; // Ensure we don't go out of bounds
 
                 // Display all messages
-                for (int j = 0; j < message_count; j++) {
-                    mvwprintw(msg_win, j + 1, 1, "%s", messages[j]);
-                }
-                wrefresh(msg_win);
+                /* for (int j = 0; j < message_count; j++) { */
+                /*     mvwprintw(msg_win, j + 1, 1, "%s", messages[j]); */
+                /* } */
+                /* wrefresh(msg_win); */
+
+                updateChatBox(clientMessages, msg_win);
 
                 i = 0;
                 memset(str, 0, sizeof str); // Clear the input string
