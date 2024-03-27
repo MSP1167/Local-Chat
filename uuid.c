@@ -2,9 +2,16 @@
 #include <time.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/time.h>
 
 /// REMEMBER TO FREE THIS
 char* generate_uuid_v4() {
+    // Depending on the OS/Enviroment, you may need to srand on each thread
+    // To keep it simple, we just srand on every call...
+    struct timeval now;
+    gettimeofday(&now, NULL);
+    srand((unsigned int) now.tv_usec);
+
     const char *template = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx";
     const char *hex = "0123456789ABCDEF";
 
