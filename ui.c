@@ -1,4 +1,5 @@
 #include <ncurses/ncurses.h>
+#include <ncurses/panel.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <string.h>
@@ -16,6 +17,7 @@
 #define BROADCAST_PORT 8081
 
 extern int server_port;
+extern WINDOW* log_win;
 
 void sendBroadcast() {
     log_message("Sending Broadcast...");
@@ -69,7 +71,9 @@ void updateChatBox(MessageList* clientMessages, WINDOW* chatWindow) {
         temp = temp->next;
         i++;
     }
-    wrefresh(chatWindow);
+    //wrefresh(chatWindow);
+    update_panels();
+    doupdate();
 
     pthread_mutex_unlock(&clientMessages->mutex);
 }
@@ -79,6 +83,7 @@ void* startUI(void* _clientMessages) {
     char messages[MAX_MESSAGES][MAX_MESSAGE_LENGTH] = {0}; // Messages storage
     int message_count = 0; // How many messages have been stored
     char log_buf[512]; // Buffer for log messages
+    bool show_log_win = FALSE;
 
     int row, col;
     getmaxyx(stdscr, row, col); // Get the number of rows and columns
@@ -89,19 +94,32 @@ void* startUI(void* _clientMessages) {
 
     box(msg_win, 0, 0);
     box(input_win, 0, 0);
-    wrefresh(msg_win);
-    wrefresh(input_win);
-    wrefresh(log_win);
+    mvwprintw(msg_win, 0, 1, "Messages");
 
     keypad(input_win, TRUE);
 
     wtimeout(input_win, 100);
 
+    // Panels
+    PANEL *msg_panel = new_panel(msg_win);
+    PANEL *input_panel = new_panel(input_win);
+    PANEL *log_panel = new_panel(log_win);
+
+    //top_panel(msg_panel);
+
+    if (!show_log_win) {
+        hide_panel(log_panel);
+    }
+
     // Display prompt
     mvwprintw(input_win, 1, 1, "Enter a message: ");
     wclrtoeol(input_win); // Clear the rest of the line
     box(input_win, 0, 0);
-    wrefresh(input_win);
+    //wrefresh(input_win);
+
+    update_panels();
+    //wrefresh(panel_window(msg_panel));
+    doupdate();
 
     int lastMessageRead = 0;
     pthread_mutex_lock(&clientMessages->mutex);
@@ -164,7 +182,17 @@ void* startUI(void* _clientMessages) {
             }
             pthread_mutex_unlock(&clientMessages->mutex);
             /* wrefresh(msg_win); */
+        } else if (ch == KEY_F(9)) {
+            if (show_log_win) {
+                hide_panel(log_panel);
+            }
+            else {
+                show_panel(log_panel);
+            }
+            show_log_win = show_log_win ? FALSE : TRUE;
 
+            update_panels();
+            doupdate();
         } else if (ch == KEY_F(10)) {
             sendBroadcast();
             //TODO: Add a hotkey to print out the contents of the internal clientMessages
@@ -179,7 +207,9 @@ void* startUI(void* _clientMessages) {
                 str[i++] = ch; // Store character and advance
                 mvwaddch(input_win, 1, 17+i, ch); // Display the character
             }
-            wrefresh(input_win);
+            //wrefresh(input_win);
+            update_panels();
+            doupdate();
         }
 
         if (ch == '\n' || i >= MAX_MESSAGE_LENGTH - 1) {
@@ -214,15 +244,21 @@ void* startUI(void* _clientMessages) {
                 mvwprintw(input_win, 1, 1, "Enter a message: ");
                 wclrtoeol(input_win); // Clear the rest of the line
                 box(input_win, 0, 0);
-                wrefresh(input_win);
+                //wrefresh(input_win);
+                update_panels();
+                doupdate();
             }
         }
     }
     printf("Exiting...\n");
 
     // Cleanup
+    del_panel(msg_panel);
+    del_panel(input_panel);
+    del_panel(log_panel);
     delwin(msg_win);
     delwin(input_win);
+    delwin(log_win);
     endwin();
 
     exit(0);

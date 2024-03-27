@@ -1,6 +1,7 @@
 #include "log.h"
 
 #include <stdio.h>
+#include <ncurses/panel.h>
 #include "global.h"
 
 WINDOW* log_win = NULL;
@@ -30,7 +31,9 @@ void log_message(const char *message) {
     log_line++;
 
     box(log_win, 0, 0);
-    wrefresh(log_win);
+    update_panels();
+    doupdate();
+    //wrefresh(log_win);
 
     log_to_file(message, "INFO");
 
