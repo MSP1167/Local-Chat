@@ -33,7 +33,7 @@ int main() {
 
     int rows, cols;
     getmaxyx(stdscr, rows, cols);
-    init_log_win(rows, cols - 30);
+    init_log_win(rows, cols);
 
     WSADATA wsa;
 

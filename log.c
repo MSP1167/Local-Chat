@@ -9,7 +9,7 @@ pthread_mutex_t log_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 void init_log_win(int row, int col) {
     int log_width = 30;
-    log_win = newwin(row, col, 0, col - log_width);
+    log_win = newwin(row - 3, log_width, 0, col - log_width);
     scrollok(log_win, TRUE);
     box(log_win, 0, 0);
 }
