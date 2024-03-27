@@ -203,7 +203,7 @@ void* startUI(void* _clientMessages) {
             if (ch == KEY_BACKSPACE || ch == '\b' || ch == 127) { // Handle backspace
                 if (i > 0) {
                     i--; // Move back one character
-                    mvwdelch(input_win, 1, 18+i); // Delete the displayed character
+                    mvwaddch(input_win, 1, 18+i, ' ');
                 }
             } else {
                 str[i++] = ch; // Store character and advance
