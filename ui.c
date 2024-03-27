@@ -66,10 +66,12 @@ void updateChatBox(MessageList* clientMessages, WINDOW* chatWindow) {
         //TODO: Message stuff here
         Message current_message = temp->message;
         char* displayMessage = current_message.message;
-        mvwprintw(chatWindow, i, 1, "%s", displayMessage);
+        if (current_message.id == 10) {
+            mvwprintw(chatWindow, i, 1, "%s: %s", current_message.username, displayMessage);
+            i++;
+        }
 
         temp = temp->next;
-        i++;
     }
     //wrefresh(chatWindow);
     update_panels();
@@ -219,8 +221,9 @@ void* startUI(void* _clientMessages) {
                 if(strcmp(str, "exit") == 0) break;
 
                 // Add message to global list
-                Message message = {10, "", ""};
+                Message message = {10, FALSE, "", "", ""};
                 message.id = 10;
+                strncpy(message.username, uuid_str, MAX_USERNAME_LENGTH);
                 strncpy(message.message, str, MAX_MESSAGE_LENGTH);
                 strncpy(message.uuid, generate_uuid_v4(), MAX_UUID_LENGTH);
                 print_message(&message);
