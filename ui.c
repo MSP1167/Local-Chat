@@ -19,6 +19,8 @@
 extern int server_port;
 extern WINDOW* log_win;
 
+int screenRows, screenCols;
+
 void sendBroadcast() {
     log_message("Sending Broadcast...");
     SOCKET sock;
@@ -80,6 +82,59 @@ void updateChatBox(MessageList* clientMessages, WINDOW* chatWindow) {
     pthread_mutex_unlock(&clientMessages->mutex);
 }
 
+void updateUsername(char* username) {
+    int box_width = screenCols / 2;
+    WINDOW *input_win = newwin(3, box_width, (screenCols / 2) - (box_width / 2), (screenRows / 2) - 2);
+
+    box(input_win, 0, 0);
+    mvwprintw(input_win, 0, 2, "Input Username");
+
+    keypad(input_win, TRUE);
+    wtimeout(input_win, 100);
+
+    PANEL *input_panel = new_panel(input_win);
+
+    update_panels();
+    doupdate();
+
+    const int inputOffset = 1;
+    char str[MAX_USERNAME_LENGTH] = {0};
+    int i = 0;
+    while (1) {
+        int ch = 0;
+
+        ch = wgetch(input_win);
+
+        if (ch == ERR) {
+            // Do nothing for now
+        } else if (ch != '\n' && i < MAX_MESSAGE_LENGTH - 1) {
+            if (ch == KEY_BACKSPACE || ch == '\b' || ch == 127) { // Handle backspace
+                if (i > 0) {
+                    i--; // Move back one character
+                    mvwaddch(input_win, 1, inputOffset+1+i, ' ');
+                }
+            } else {
+                str[i++] = ch; // Store character and advance
+                mvwaddch(input_win, 1, inputOffset+i, ch); // Display the character
+            }
+            //wrefresh(input_win);
+            update_panels();
+            doupdate();
+        }
+
+        if (ch == '\n' || i >= MAX_USERNAME_LENGTH - 1) {
+            if (i > 0) {
+                str[i] = '\0';
+
+                strcpy(username, str);
+                break;
+            }
+        }
+    }
+    del_panel(input_panel);
+    delwin(input_win);
+}
+
 void* startUI(void* _clientMessages) {
     MessageList *clientMessages = (MessageList*)_clientMessages;
     char messages[MAX_MESSAGES][MAX_MESSAGE_LENGTH] = {0}; // Messages storage
@@ -87,12 +142,14 @@ void* startUI(void* _clientMessages) {
     char log_buf[512]; // Buffer for log messages
     bool show_log_win = FALSE;
 
-    int row, col;
-    getmaxyx(stdscr, row, col); // Get the number of rows and columns
+    char username[MAX_USERNAME_LENGTH] = {0}; // Username initialized to empty
+    bool usernameSet = FALSE;
+
+    getmaxyx(stdscr, screenRows, screenCols); // Get the number of rows and columns
 
     // Windows
-    WINDOW *msg_win = newwin(row - 3, col, 0, 0);
-    WINDOW *input_win = newwin(3, col, row - 3, 0);
+    WINDOW *msg_win = newwin(screenRows - 3, screenCols, 0, 0);
+    WINDOW *input_win = newwin(3, screenCols, screenRows - 3, 0);
 
     box(msg_win, 0, 0);
     box(input_win, 0, 0);
@@ -136,6 +193,13 @@ void* startUI(void* _clientMessages) {
         ch = wgetch(input_win);
         // snprintf(log_buf, sizeof(log_buf), "Got Character %c (%d)", ch, ch);
         // log_message(log_buf);
+
+        if (!usernameSet) {
+            updateUsername(username);
+            usernameSet = TRUE;
+            update_panels();
+            doupdate();
+        }
 
         if (ch == ERR) {
             // This means timeout happened
@@ -223,7 +287,7 @@ void* startUI(void* _clientMessages) {
                 // Add message to global list
                 Message message = {10, FALSE, "", "", ""};
                 message.id = 10;
-                strncpy(message.username, uuid_str, MAX_USERNAME_LENGTH);
+                strncpy(message.username, username, MAX_USERNAME_LENGTH);
                 strncpy(message.message, str, MAX_MESSAGE_LENGTH);
                 strncpy(message.uuid, generate_uuid_v4(), MAX_UUID_LENGTH);
                 print_message(&message);
