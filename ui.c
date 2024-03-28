@@ -75,7 +75,6 @@ void updateChatBox(MessageList* clientMessages, WINDOW* chatWindow) {
 
         temp = temp->next;
     }
-    //wrefresh(chatWindow);
     update_panels();
     doupdate();
 
@@ -117,7 +116,6 @@ void updateUsername(char* username) {
                 str[i++] = ch; // Store character and advance
                 mvwaddch(input_win, 1, inputOffset+i, ch); // Display the character
             }
-            //wrefresh(input_win);
             update_panels();
             doupdate();
         }
@@ -164,8 +162,6 @@ void* startUI(void* _clientMessages) {
     PANEL *input_panel = new_panel(input_win);
     PANEL *log_panel = new_panel(log_win);
 
-    //top_panel(msg_panel);
-
     if (!show_log_win) {
         hide_panel(log_panel);
     }
@@ -174,10 +170,8 @@ void* startUI(void* _clientMessages) {
     mvwprintw(input_win, 1, 1, "Enter a message: ");
     wclrtoeol(input_win); // Clear the rest of the line
     box(input_win, 0, 0);
-    //wrefresh(input_win);
 
     update_panels();
-    //wrefresh(panel_window(msg_panel));
     doupdate();
 
     int lastMessageRead = 0;
@@ -189,10 +183,7 @@ void* startUI(void* _clientMessages) {
     while (1) {
         int ch = 0;
 
-        // log_message("Getting character...");
         ch = wgetch(input_win);
-        // snprintf(log_buf, sizeof(log_buf), "Got Character %c (%d)", ch, ch);
-        // log_message(log_buf);
 
         if (!usernameSet) {
             updateUsername(username);
@@ -203,7 +194,6 @@ void* startUI(void* _clientMessages) {
 
         if (ch == ERR) {
             // This means timeout happened
-            // log_message("Doing Downtime");
             pthread_mutex_lock(&clientMessages->mutex);
 
             int totalItemsAdded = clientMessages->totalItemsAdded;
@@ -212,7 +202,6 @@ void* startUI(void* _clientMessages) {
                 snprintf(log_buf, sizeof(log_buf), "Adding messages... %d -> %d", lastMessageRead, totalItemsAdded);
                 log_message(log_buf);
                 pthread_mutex_unlock(&clientMessages->mutex);
-                //log_message("Getting Messages...");
                 // TODO: Problem with this, if we start over the max then this will fail
                 Message* temp = getMessageAtIndex(clientMessages, lastMessageRead);
                 char* message = temp->message;
@@ -225,29 +214,15 @@ void* startUI(void* _clientMessages) {
                 }
                 print_message(temp);
 
-                /* log_message("Got Message"); */
-                /* snprintf(log_buf, sizeof(log_buf), "strncpy with params:"); */
-                /* log_message(log_buf); */
-                /* snprintf(log_buf, sizeof(log_buf), "\tmessages[%d]", message_count); */
-                /* log_message(log_buf); */
-                /* snprintf(log_buf, sizeof(log_buf), "\t%s", message); */
-                /* log_message(log_buf); */
-                /* snprintf(log_buf, sizeof(log_buf), "\t%d", strlen(message)); */
-                /* log_message(log_buf); */
                 strncpy(messages[message_count], message, strlen(message));
                 log_message("Displaying Messages...");
                 message_count = (message_count + 1) % MAX_MESSAGES; // Ensure we don't go out of bounds
-                // Display all messages
-                /* for (int j = 0; j < message_count; j++) { */
-                /*     mvwprintw(msg_win, j + 1, 1, "%s", messages[j]); */
-                /* } */
                 pthread_mutex_unlock(&clientMessages->mutex);
                 updateChatBox(clientMessages, msg_win);
                 pthread_mutex_lock(&clientMessages->mutex);
                 lastMessageRead++;
             }
             pthread_mutex_unlock(&clientMessages->mutex);
-            /* wrefresh(msg_win); */
         } else if (ch == KEY_F(9)) {
             if (show_log_win) {
                 hide_panel(log_panel);
@@ -273,7 +248,6 @@ void* startUI(void* _clientMessages) {
                 str[i++] = ch; // Store character and advance
                 mvwaddch(input_win, 1, 17+i, ch); // Display the character
             }
-            //wrefresh(input_win);
             update_panels();
             doupdate();
         }
@@ -292,15 +266,8 @@ void* startUI(void* _clientMessages) {
                 strncpy(message.uuid, generate_uuid_v4(), MAX_UUID_LENGTH);
                 print_message(&message);
                 addMessageListItem(clientMessages, message);
-                // printMessageList(clientMessages);
                 strncpy(messages[message_count], str, MAX_MESSAGE_LENGTH);
                 message_count = (message_count + 1) % MAX_MESSAGES; // Ensure we don't go out of bounds
-
-                // Display all messages
-                /* for (int j = 0; j < message_count; j++) { */
-                /*     mvwprintw(msg_win, j + 1, 1, "%s", messages[j]); */
-                /* } */
-                /* wrefresh(msg_win); */
 
                 updateChatBox(clientMessages, msg_win);
 
@@ -311,7 +278,6 @@ void* startUI(void* _clientMessages) {
                 mvwprintw(input_win, 1, 1, "Enter a message: ");
                 wclrtoeol(input_win); // Clear the rest of the line
                 box(input_win, 0, 0);
-                //wrefresh(input_win);
                 update_panels();
                 doupdate();
             }
