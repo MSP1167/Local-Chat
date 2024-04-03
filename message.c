@@ -14,7 +14,7 @@ char* serialize_message(const Message* message) {
     }
 
     // create a simple json string
-    snprintf(buffer, 4096, "{\"id\": %d, \"username\": \"%s\", \"message\": \"%s\", \"uuid\": \"%s\"}", message->id, message->username, message->message, message->uuid);
+    snprintf(buffer, 4096, "{\"id\": %d, \"username\": \"%s\", \"message\": \"%s\", \"time\": \"%s\", \"uuid\": \"%s\"}", message->id, message->username, message->message, message->time, message->uuid);
 
     return buffer; // caller is responsible for freeing this memory
 }
@@ -23,13 +23,14 @@ int deserialize_message(const char* json, Message* message) {
     // Assuming MAX_MESSAGE_LENGTH and MAX_UUID_LENGTH are defined appropriately
     char usernameBuffer[MAX_USERNAME_LENGTH];
     char messageBuffer[MAX_MESSAGE_LENGTH];
+    char timeBuffer[MAX_TIME_LENGTH];
     char uuidBuffer[MAX_UUID_LENGTH];
     char log_buf[512]; // Buffer for log messages
 
     snprintf(log_buf, sizeof(log_buf), "Deserializing Message:\n%s", json);
     log_message(log_buf);
-    int parsed = sscanf(json, "{\"id\": %d, \"username\": \"%[^\"]\", \"message\": \"%[^\"]\", \"uuid\": \"%[^\"]\"}",
-                        &message->id, usernameBuffer, messageBuffer, uuidBuffer);
+    int parsed = sscanf(json, "{\"id\": %d, \"username\": \"%[^\"]\", \"message\": \"%[^\"]\", \"time\": \"%[^\"]\", \"uuid\": \"%[^\"]\"}",
+                        &message->id, usernameBuffer, messageBuffer, timeBuffer, uuidBuffer);
 
     if (parsed == 4) {
         message->server_message = FALSE;
@@ -38,6 +39,9 @@ int deserialize_message(const char* json, Message* message) {
 
         strncpy(message->message, messageBuffer, MAX_MESSAGE_LENGTH - 1);
         message->message[MAX_MESSAGE_LENGTH - 1] = '\0';
+
+        strncpy(message->time, timeBuffer, MAX_TIME_LENGTH - 1);
+        message->message[MAX_TIME_LENGTH - 1] = '\0';
 
         strncpy(message->uuid, uuidBuffer, MAX_UUID_LENGTH - 1);
         message->uuid[MAX_UUID_LENGTH - 1] = '\0';
@@ -53,5 +57,6 @@ void print_message(const Message* message) {
     printf("\tid      : %d\n", message->id);
     printf("\tusername: %s\n", message->username);
     printf("\tmessage : %s\n", message->message);
+    printf("\ttime    : %s\n", message->time);
     printf("\tuuid    : %s\n", message->uuid);
 }

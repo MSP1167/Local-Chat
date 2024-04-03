@@ -3,6 +3,7 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 #include <winsock2.h>
 
 #include "ui.h"
@@ -69,7 +70,14 @@ void updateChatBox(MessageList* clientMessages, WINDOW* chatWindow) {
         Message current_message = temp->message;
         char* displayMessage = current_message.message;
         if (current_message.id == 10) {
-            mvwprintw(chatWindow, i, 1, "%s: %s", current_message.username, displayMessage);
+            char message_time_year[MAX_TIME_LENGTH]   = {0};
+            char message_time_month[MAX_TIME_LENGTH]  = {0};
+            char message_time_day[MAX_TIME_LENGTH]    = {0};
+            char message_time_hour[MAX_TIME_LENGTH]   = {0};
+            char message_time_minute[MAX_TIME_LENGTH] = {0};
+            char message_time_second[MAX_TIME_LENGTH] = {0};
+            sscanf(current_message.time, "%[^-]-%[^-]-%s %[^-]-%[^-]-%s", message_time_year, message_time_month, message_time_day, message_time_hour, message_time_minute, message_time_second);
+            mvwprintw(chatWindow, i, 1, "%s-%s-%s %s:%s:%s %s: %s", message_time_year, message_time_month, message_time_day, message_time_hour, message_time_minute, message_time_second, current_message.username, displayMessage);
             i++;
         }
 
@@ -276,10 +284,14 @@ void* startUI(void* _clientMessages) {
                 if(strcmp(str, "exit") == 0) break;
 
                 // Add message to global list
-                Message message = {10, FALSE, "", "", ""};
+                Message message = {10, FALSE, "", "", "", ""};
                 message.id = 10;
                 strncpy(message.username, username, MAX_USERNAME_LENGTH);
                 strncpy(message.message, str, MAX_MESSAGE_LENGTH);
+                char time_now[MAX_TIME_LENGTH]= {0};
+                time_t now = time(NULL);
+                strftime(time_now, MAX_TIME_LENGTH, "%Y-%m-%d %H-%M-%S", localtime(&now));
+                strncpy(message.time, time_now, MAX_TIME_LENGTH);
                 strncpy(message.uuid, generate_uuid_v4(), MAX_UUID_LENGTH);
                 print_message(&message);
                 addMessageListItem(clientMessages, message);
