@@ -84,6 +84,7 @@ void updateChatBox(MessageList* clientMessages, WINDOW* chatWindow) {
 void updateUsername(char* username) {
     int box_width = screenCols / 2;
     WINDOW *input_win = newwin(3, box_width, (screenCols / 2) - (box_width / 2), (screenRows / 2) - 2);
+    wattron(input_win, COLOR_PAIR(2));
 
     box(input_win, 0, 0);
     mvwprintw(input_win, 0, 2, "Input Username");
@@ -133,6 +134,13 @@ void updateUsername(char* username) {
     delwin(input_win);
 }
 
+void drawInputWindow(WINDOW* input_win) {
+    // Display prompt
+    mvwprintw(input_win, 1, 1, "Enter a message: ");
+    wclrtoeol(input_win); // Clear the rest of the line
+    box(input_win, 0, 0);
+}
+
 void* startUI(void* _clientMessages) {
     MessageList *clientMessages = (MessageList*)_clientMessages;
     char messages[MAX_MESSAGES][MAX_MESSAGE_LENGTH] = {0}; // Messages storage
@@ -144,18 +152,22 @@ void* startUI(void* _clientMessages) {
     bool usernameSet = FALSE;
 
     getmaxyx(stdscr, screenRows, screenCols); // Get the number of rows and columns
+    //curs_set(0);
 
     // Windows
     WINDOW *msg_win = newwin(screenRows - 3, screenCols, 0, 0);
     WINDOW *input_win = newwin(3, screenCols, screenRows - 3, 0);
 
+    wattron(msg_win, COLOR_PAIR(1));
+
+    drawInputWindow(input_win);
+
     box(msg_win, 0, 0);
-    box(input_win, 0, 0);
     mvwprintw(msg_win, 0, 1, "Messages");
 
     keypad(input_win, TRUE);
 
-    wtimeout(input_win, 100);
+    wtimeout(input_win, 10);
 
     // Panels
     PANEL *msg_panel = new_panel(msg_win);
@@ -166,10 +178,6 @@ void* startUI(void* _clientMessages) {
         hide_panel(log_panel);
     }
 
-    // Display prompt
-    mvwprintw(input_win, 1, 1, "Enter a message: ");
-    wclrtoeol(input_win); // Clear the rest of the line
-    box(input_win, 0, 0);
 
     update_panels();
     doupdate();
@@ -182,12 +190,21 @@ void* startUI(void* _clientMessages) {
     int i = 0;
     while (1) {
         int ch = 0;
-
+        wattron(input_win, COLOR_PAIR(2));
         ch = wgetch(input_win);
 
         if (!usernameSet) {
+            wattroff(input_win, COLOR_PAIR(2));
+            wattron(input_win, COLOR_PAIR(1));
+            touchwin(input_win);
+            update_panels();
+            doupdate();
+
             updateUsername(username);
             usernameSet = TRUE;
+            wattroff(input_win, COLOR_PAIR(1));
+            wattron(input_win, COLOR_PAIR(2));
+            drawInputWindow(input_win);
             update_panels();
             doupdate();
         }
@@ -275,9 +292,7 @@ void* startUI(void* _clientMessages) {
                 memset(str, 0, sizeof str); // Clear the input string
 
                 // Display prompt
-                mvwprintw(input_win, 1, 1, "Enter a message: ");
-                wclrtoeol(input_win); // Clear the rest of the line
-                box(input_win, 0, 0);
+                drawInputWindow(input_win);
                 update_panels();
                 doupdate();
             }
