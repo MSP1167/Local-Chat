@@ -35,20 +35,13 @@ int deserialize_message(const char* json, Message* message) {
         message->server_message = FALSE;
         strncpy(message->username, usernameBuffer, MAX_USERNAME_LENGTH - 1);
         message->username[MAX_USERNAME_LENGTH - 1] = '\0';
-        /* log_message("Message Desearialized Successfully"); */
-        /* snprintf(log_buf, sizeof(log_buf), "ID: %d", message->id); */
-        /* log_message(log_buf); */
+
         strncpy(message->message, messageBuffer, MAX_MESSAGE_LENGTH - 1);
-        //log_message("Message strncpy Successful");
         message->message[MAX_MESSAGE_LENGTH - 1] = '\0';
-        /* snprintf(log_buf, sizeof(log_buf), "Message is: %s", messageBuffer); */
-        /* log_message(log_buf); */
+
         strncpy(message->uuid, uuidBuffer, MAX_UUID_LENGTH - 1);
-        //log_message("UUID strncpy Successful");
         message->uuid[MAX_UUID_LENGTH - 1] = '\0';
-        /* snprintf(log_buf, sizeof(log_buf), "UUID is: %s", uuidBuffer); */
-        /* log_message(log_buf); */
-        //log_message("Message Allocated Successfully");
+
         return 1; // Parsing successful
     } else {
         log_message("Message Desearialized Unsuccessful!");
