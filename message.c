@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <string.h>
+#include <sys/time.h>
 
 #include "log.h"
 #include "uuid.h"
@@ -32,7 +33,7 @@ int deserialize_message(const char* json, Message* message) {
     int parsed = sscanf(json, "{\"id\": %d, \"username\": \"%[^\"]\", \"message\": \"%[^\"]\", \"time\": \"%[^\"]\", \"uuid\": \"%[^\"]\"}",
                         &message->id, usernameBuffer, messageBuffer, timeBuffer, uuidBuffer);
 
-    if (parsed == 4) {
+    if (parsed == 5) {
         message->server_message = FALSE;
         strncpy(message->username, usernameBuffer, MAX_USERNAME_LENGTH - 1);
         message->username[MAX_USERNAME_LENGTH - 1] = '\0';
@@ -52,6 +53,33 @@ int deserialize_message(const char* json, Message* message) {
         return 0; // Parsing failed
     }
 }
+
+char *convert_time_to_string(const struct tm time) {
+    char* buffer = malloc(2048);
+    if (buffer == NULL) {
+        return NULL;
+    }
+
+    strftime(buffer, MAX_TIME_LENGTH, TIME_FORMAT_STR, &time);
+    return buffer; // MAKE SURE TO FREE THIS
+}
+
+struct tm convert_string_to_time(const char* string) {
+    struct tm tm;
+    int year, month, day, hour, minute, second;
+
+    if (sscanf(string, "%d-%d-%d %d-%d-%d", &year, &month, &day, &hour, &minute, &second) == 6) {
+        tm.tm_year  = year - 1900; // Since 1900
+        tm.tm_mon   = month - 1; // Starts at 0
+        tm.tm_mday  = day;
+        tm.tm_hour  = hour;
+        tm.tm_sec   = second;
+        tm.tm_isdst = -1;       // Daylight Savings Automatic
+    }
+    return tm;
+}
+
+
 void print_message(const Message* message) {
     printf("Message:\n");
     printf("\tid      : %d\n", message->id);

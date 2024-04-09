@@ -70,14 +70,8 @@ void updateChatBox(MessageList* clientMessages, WINDOW* chatWindow) {
         Message current_message = temp->message;
         char* displayMessage = current_message.message;
         if (current_message.id == 10) {
-            char message_time_year[MAX_TIME_LENGTH]   = {0};
-            char message_time_month[MAX_TIME_LENGTH]  = {0};
-            char message_time_day[MAX_TIME_LENGTH]    = {0};
-            char message_time_hour[MAX_TIME_LENGTH]   = {0};
-            char message_time_minute[MAX_TIME_LENGTH] = {0};
-            char message_time_second[MAX_TIME_LENGTH] = {0};
-            sscanf(current_message.time, "%[^-]-%[^-]-%s %[^-]-%[^-]-%s", message_time_year, message_time_month, message_time_day, message_time_hour, message_time_minute, message_time_second);
-            mvwprintw(chatWindow, i, 1, "%s-%s-%s %s:%s:%s %s: %s", message_time_year, message_time_month, message_time_day, message_time_hour, message_time_minute, message_time_second, current_message.username, displayMessage);
+            struct tm time = convert_string_to_time(current_message.time);
+            mvwprintw(chatWindow, i, 1, "%d-%d-%d %d:%d:%d %s: %s", time.tm_year + 1900, time.tm_mon + 1, time.tm_mday, time.tm_hour, time.tm_min, time.tm_sec, current_message.username, displayMessage);
             i++;
         }
 
@@ -91,8 +85,10 @@ void updateChatBox(MessageList* clientMessages, WINDOW* chatWindow) {
 
 void updateUsername(char* username) {
     int box_width = screenCols / 2;
-    WINDOW *input_win = newwin(3, box_width, (screenCols / 2) - (box_width / 2), (screenRows / 2) - 2);
+    WINDOW *input_win = newwin(3, box_width, (screenRows / 2) - 1, (screenCols / 2) - (box_width / 2));
     wattron(input_win, COLOR_PAIR(2));
+
+    touchwin(input_win);
 
     box(input_win, 0, 0);
     mvwprintw(input_win, 0, 2, "Input Username");
@@ -290,7 +286,7 @@ void* startUI(void* _clientMessages) {
                 strncpy(message.message, str, MAX_MESSAGE_LENGTH);
                 char time_now[MAX_TIME_LENGTH]= {0};
                 time_t now = time(NULL);
-                strftime(time_now, MAX_TIME_LENGTH, "%Y-%m-%d %H-%M-%S", localtime(&now));
+                strftime(time_now, MAX_TIME_LENGTH, TIME_FORMAT_STR, localtime(&now));
                 strncpy(message.time, time_now, MAX_TIME_LENGTH);
                 strncpy(message.uuid, generate_uuid_v4(), MAX_UUID_LENGTH);
                 print_message(&message);
