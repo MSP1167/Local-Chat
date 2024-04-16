@@ -11,7 +11,7 @@
 
 #define TIME_FORMAT_STR      "%Y-%m-%d %H-%M-%S"
 #define TIME_UNFROMAT_STR    "%d-%d-%d %d-%d-%d"
-#define TIME_PRETTY_STR      "%s-%s-%s %s:%s:%s"
+#define TIME_PRETTY_STR      "%d-%d-%d %d:%d:%d"
 
 typedef struct Message {
     int id;

@@ -71,7 +71,7 @@ void updateChatBox(MessageList* clientMessages, WINDOW* chatWindow) {
         char* displayMessage = current_message.message;
         if (current_message.id == 10) {
             struct tm time = convert_string_to_time(current_message.time);
-            mvwprintw(chatWindow, i, 1, "%d-%d-%d %d:%d:%d %s: %s", time.tm_year + 1900, time.tm_mon + 1, time.tm_mday, time.tm_hour, time.tm_min, time.tm_sec, current_message.username, displayMessage);
+            mvwprintw(chatWindow, i, 1, "(%d-%02d-%02d %02d:%02d:%02d) %s: %s", time.tm_year + 1900, time.tm_mon + 1, time.tm_mday, time.tm_hour, time.tm_min, time.tm_sec, current_message.username, displayMessage);
             i++;
         }
 
@@ -233,7 +233,7 @@ void* startUI(void* _clientMessages) {
                     lastMessageRead++;
                     continue;
                 }
-                print_message(temp);
+                //print_message(temp);
 
                 strncpy(messages[message_count], message, strlen(message));
                 log_message("Displaying Messages...");
