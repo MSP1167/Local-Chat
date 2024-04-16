@@ -74,6 +74,7 @@ void* handle_main_connection_write(void* main_thread_args) {
             pthread_mutex_unlock(&clientMessages->mutex);
 
             pthread_mutex_lock(&args->mutex);
+            printf("Sending Message %s\n", message);
             if (send(sock, message, strlen(message), 0) < 0) {
                 log_message("Sent Message");
                 free(message);
@@ -100,33 +101,47 @@ void* handle_main_connection_read(void* main_thread_args) {
     char client_message[BUFFER_SIZE] = {0};
 
     // Receive a message from client
+    // Message could be concatinated b/c of multiple messages in a row stuck in the recv buffer
     while((read_size = recv(sock, client_message, BUFFER_SIZE, 0)) > 0) {
         log_message("Got Data!");
         log_message(client_message);
-        // Serialize Data
-        Message received;
-        deserialize_message(client_message, &received);
 
-        pthread_mutex_lock(&args->mutex);
-        if (args->should_exit) {
+        char* start = client_message;
+        char* end   = strchr(start, '\n');
+        while (end != NULL) {
+            *end = '\0';
+            Message received;
+            deserialize_message(start, &received);
+
+            pthread_mutex_lock(&args->mutex);
+            if (args->should_exit) {
+                pthread_mutex_unlock(&args->mutex);
+                closesocket(sock);
+                // free(args->socket_desc);
+                printf("Exiting Main Connection Read Thread...\n");
+                return NULL;
+            }
             pthread_mutex_unlock(&args->mutex);
-            closesocket(sock);
-            // free(args->socket_desc);
-            printf("Exiting Main Connection Read Thread...\n");
-            return NULL;
-        }
-        pthread_mutex_unlock(&args->mutex);
 
-        // Handle the request
-        if (received.id == 10) {
-            if (!searchMessageListContainsUUID(clientMessages, received.uuid)) {
-                log_message("Do not have this message, adding to list");
-                // Handles mutex and cond signalling
-                addMessageListItem(clientMessages, received);
+            // Handle the request
+            if (received.id == 10) {
+                if (!searchMessageListContainsUUID(clientMessages, received.uuid)) {
+                    log_message("Do not have this message, adding to list");
+                    // Handles mutex and cond signalling
+                    addMessageListItem(clientMessages, received);
+                }
+                else {
+                    log_message("Already have this message, skipping...");
+                }
             }
-            else {
-                log_message("Already have this message, skipping...");
-            }
+
+            start = end + 1;
+            end = strchr(start, '\n');
+        }
+        if (*start != '\0') {
+            memmove(client_message, start, strlen(start) + 1);
+        } else {
+            memset(client_message, 0, BUFFER_SIZE);
         }
     }
 

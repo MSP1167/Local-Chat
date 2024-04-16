@@ -15,7 +15,7 @@ char* serialize_message(const Message* message) {
     }
 
     // create a simple json string
-    snprintf(buffer, 4096, "{\"id\": %d, \"username\": \"%s\", \"message\": \"%s\", \"time\": \"%s\", \"uuid\": \"%s\"}", message->id, message->username, message->message, message->time, message->uuid);
+    snprintf(buffer, 4096, "{\"id\": %d, \"username\": \"%s\", \"message\": \"%s\", \"time\": \"%s\", \"uuid\": \"%s\"}\n", message->id, message->username, message->message, message->time, message->uuid);
 
     return buffer; // caller is responsible for freeing this memory
 }
@@ -30,7 +30,7 @@ int deserialize_message(const char* json, Message* message) {
 
     snprintf(log_buf, sizeof(log_buf), "Deserializing Message:\n%s", json);
     log_message(log_buf);
-    int parsed = sscanf(json, "{\"id\": %d, \"username\": \"%[^\"]\", \"message\": \"%[^\"]\", \"time\": \"%[^\"]\", \"uuid\": \"%[^\"]\"}",
+    int parsed = sscanf(json, "{\"id\": %d, \"username\": \"%[^\"]\", \"message\": \"%[^\"]\", \"time\": \"%[^\"]\", \"uuid\": \"%[^\"]\"}\n",
                         &message->id, usernameBuffer, messageBuffer, timeBuffer, uuidBuffer);
 
     if (parsed == 5) {
@@ -73,6 +73,7 @@ struct tm convert_string_to_time(const char* string) {
         tm.tm_mon   = month - 1; // Starts at 0
         tm.tm_mday  = day;
         tm.tm_hour  = hour;
+        tm.tm_min   = minute;
         tm.tm_sec   = second;
         tm.tm_isdst = -1;       // Daylight Savings Automatic
     }
