@@ -100,8 +100,8 @@ Message* getMessageAtIndex(MessageList* list, int index) {
         current = current->next;
     }
 
-    printf("Retrieved Message:\n");
-    print_message(&current->message);
+    //printf("Retrieved Message:\n");
+    //print_message(&current->message);
 
     pthread_mutex_unlock(&list->mutex);
     return &(current->message);
