@@ -13,6 +13,8 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #endif
+#include <sys/types.h>
+#include <ifaddrs.h>
 #include <unistd.h>
 
 #include "ui.h"
@@ -26,6 +28,8 @@
 #define MAX_MESSAGES 100
 #define MAX_USERS    50
 
+#define BROADCAST_SELF
+#define BROADCAST_IP_SELF "127.255.255.255"
 #define BROADCAST_IP "127.255.255.255"
 #define BROADCAST_PORT 8081
 
@@ -54,22 +58,42 @@ void sendBroadcast() {
         return;
     }
 
-    memset(&broadcastAddr, 0, sizeof(broadcastAddr));
-    broadcastAddr.sin_family = AF_INET;
-    broadcastAddr.sin_addr.s_addr = inet_addr(BROADCAST_IP);
-    broadcastAddr.sin_port = htons(BROADCAST_PORT);
-
     char message[64];
     sprintf(message, "%s:%d", uuid_str, server_port);
 
-    if (sendto(sock, message, sizeof(message), 0, (struct sockaddr *)&broadcastAddr, sizeof(broadcastAddr)) < 0) {
-        perror("Failed to send port");
-    }
-    closesocket(sock);
+    struct ifaddrs *ifaddr;
+    int family;
+
+    getifaddrs(&ifaddr);
+
     snprintf(log_buf, sizeof(log_buf), "Sent Broadcast %s", message);
     log_message(log_buf);
-    snprintf(log_buf, sizeof(log_buf), "\tto %s:%d", BROADCAST_IP, BROADCAST_PORT);
-    log_message(log_buf);
+    for (struct ifaddrs *ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
+        if (ifa->ifa_addr == NULL) continue;
+
+        family = ifa->ifa_addr->sa_family;
+
+        // Only do IPv4 for now
+        if (family == AF_INET) {
+            memset(&broadcastAddr, 0, sizeof(broadcastAddr));
+            struct sockaddr_in *ipv4 = (struct sockaddr_in *)ifa->ifa_broadaddr;
+
+            if (ipv4 == NULL) continue;
+
+            broadcastAddr.sin_family = AF_INET;
+            broadcastAddr.sin_addr = ipv4->sin_addr;
+            broadcastAddr.sin_port = htons(BROADCAST_PORT);
+
+            if (sendto(sock, message, sizeof(message), 0, (struct sockaddr *)&broadcastAddr, sizeof(broadcastAddr)) < 0) {
+                perror("Failed to send port");
+            }
+
+            snprintf(log_buf, sizeof(log_buf), "\tto %s:%d", inet_ntoa(ipv4->sin_addr), BROADCAST_PORT);
+            log_message(log_buf);
+        }
+    }
+    freeifaddrs(ifaddr);
+    closesocket(sock);
 }
 
 void sendJoin(MessageList* list, const char* username) {

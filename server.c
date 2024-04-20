@@ -317,14 +317,14 @@ void* startServer(void* _clientMessages) {
     // Create sockets
     if((server_socket = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET) {
         #ifdef _WIN32
-        //printf("Could not create socket : %d", WSAGetLastError());
+        printf("Could not create socket : %d", WSAGetLastError());
         #else
         perror("Could not create socket");
         #endif
     }
     if((broadcast_socket = socket(AF_INET, SOCK_DGRAM, 0)) == INVALID_SOCKET) {
         #ifdef _WIN32
-        //printf("Could not create socket : %d", WSAGetLastError());
+        printf("Could not create socket : %d", WSAGetLastError());
         #else
         perror("Could not create socket");
         #endif
