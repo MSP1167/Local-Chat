@@ -4,9 +4,9 @@
 #include <stdbool.h>
 #include <sys/time.h>
 #include "uuid.h"
+#include "user.h"
 
 #define  MAX_MESSAGE_LENGTH  1024
-#define  MAX_USERNAME_LENGTH 1024
 #define  MAX_TIME_LENGTH     1024
 
 #define TIME_FORMAT_STR      "%Y-%m-%d %H-%M-%S"

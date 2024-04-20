@@ -124,7 +124,7 @@ void* handle_main_connection_read(void* main_thread_args) {
             pthread_mutex_unlock(&args->mutex);
 
             // Handle the request
-            if (received.id == 10) {
+            if (received.id == 10 || received.id == 11 || received.id == 21 || received.id == 31) {
                 if (!searchMessageListContainsUUID(clientMessages, received.uuid)) {
                     log_message("Do not have this message, adding to list");
                     // Handles mutex and cond signalling

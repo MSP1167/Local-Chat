@@ -2,23 +2,32 @@
 #include <ncurses/panel.h>
 #include <pthread.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <sys/time.h>
 #include <time.h>
 #include <winsock2.h>
+#include <unistd.h>
 
 #include "ui.h"
 #include "message.h"
 #include "messagelist.h"
+#include "user.h"
+#include "userlist.h"
 #include "global.h"
 #include "log.h"
 
+
 #define MAX_MESSAGES 100
+#define MAX_USERS    50
 
 #define BROADCAST_IP "127.255.255.255"
 #define BROADCAST_PORT 8081
 
 extern int server_port;
 extern WINDOW* log_win;
+
+UserList* userList;
 
 int screenRows, screenCols;
 
@@ -58,6 +67,42 @@ void sendBroadcast() {
     log_message(log_buf);
 }
 
+void sendJoin(MessageList* list, const char* username) {
+    Message message;
+
+    message.id = 11;
+    message.server_message = false;
+    strcpy(message.username, username);
+    strcpy(message.message, uuid_str);
+
+    char time_now[MAX_TIME_LENGTH]= {0};
+    time_t now = time(NULL);
+    strftime(time_now, MAX_TIME_LENGTH, TIME_FORMAT_STR, localtime(&now));
+    strncpy(message.time, time_now, MAX_TIME_LENGTH);
+
+    strncpy(message.uuid, generate_uuid_v4(), MAX_UUID_LENGTH);
+
+    addMessageListItem(list, message);
+}
+
+void sendLeave(MessageList* list, const char* username) {
+    Message message;
+
+    message.id = 31;
+    message.server_message = false;
+    strcpy(message.username, username);
+    strcpy(message.message, uuid_str);
+
+    char time_now[MAX_TIME_LENGTH]= {0};
+    time_t now = time(NULL);
+    strftime(time_now, MAX_TIME_LENGTH, TIME_FORMAT_STR, localtime(&now));
+    strncpy(message.time, time_now, MAX_TIME_LENGTH);
+
+    strncpy(message.uuid, generate_uuid_v4(), MAX_UUID_LENGTH);
+
+    addMessageListItem(list, message);
+}
+
 void updateChatBox(MessageList* clientMessages, WINDOW* chatWindow) {
     // Display all messages
     pthread_mutex_lock(&clientMessages->mutex);
@@ -72,6 +117,29 @@ void updateChatBox(MessageList* clientMessages, WINDOW* chatWindow) {
         if (current_message.id == 10) {
             struct tm time = convert_string_to_time(current_message.time);
             mvwprintw(chatWindow, i, 1, "(%d-%02d-%02d %02d:%02d:%02d) %s: %s", time.tm_year + 1900, time.tm_mon + 1, time.tm_mday, time.tm_hour, time.tm_min, time.tm_sec, current_message.username, displayMessage);
+            i++;
+        }
+        else if (current_message.id == 11) {
+            struct tm time = convert_string_to_time(current_message.time);
+            mvwprintw(chatWindow, i, 1, "(%d-%02d-%02d %02d:%02d:%02d) User %s Joined", time.tm_year + 1900, time.tm_mon + 1, time.tm_mday, time.tm_hour, time.tm_min, time.tm_sec, current_message.username);
+
+            User user;
+            strcpy(user.username, current_message.username);
+            strcpy(user.uuid, current_message.message);
+
+            user.online = true;
+            struct timeval _now;
+            gettimeofday(&_now, NULL);
+            time_t now = _now.tv_sec;
+            user.lastSeen = now;
+
+            addUserListItem(userList, user);
+
+            i++;
+        }
+        else if (current_message.id == 31) {
+            struct tm time = convert_string_to_time(current_message.time);
+            mvwprintw(chatWindow, i, 1, "(%d-%02d-%02d %02d:%02d:%02d) User %s Left with Message: %s", time.tm_year + 1900, time.tm_mon + 1, time.tm_mday, time.tm_hour, time.tm_min, time.tm_sec, current_message.username, displayMessage);
             i++;
         }
 
@@ -155,6 +223,8 @@ void* startUI(void* _clientMessages) {
     char username[MAX_USERNAME_LENGTH] = {0}; // Username initialized to empty
     bool usernameSet = FALSE;
 
+    userList = createUserList(MAX_USERS);
+
     getmaxyx(stdscr, screenRows, screenCols); // Get the number of rows and columns
     //curs_set(0);
 
@@ -206,6 +276,9 @@ void* startUI(void* _clientMessages) {
 
             updateUsername(username);
             usernameSet = TRUE;
+
+            sendJoin(clientMessages, username);
+
             wattroff(input_win, COLOR_PAIR(1));
             wattron(input_win, COLOR_PAIR(2));
             drawInputWindow(input_win);
@@ -277,7 +350,11 @@ void* startUI(void* _clientMessages) {
             if (i > 0) {
                 str[i] = '\0';
 
-                if(strcmp(str, "exit") == 0) break;
+                if(strcmp(str, "exit") == 0) {
+                    sendLeave(clientMessages, username);
+                    sleep(1);
+                    break;
+                }
 
                 // Add message to global list
                 Message message = {10, FALSE, "", "", "", ""};
