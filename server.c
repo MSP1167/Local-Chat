@@ -157,7 +157,7 @@ void* handle_main_connection_read(void* main_thread_args) {
     } else if(read_size == SOCKET_ERROR) {
         #ifdef _WIN32
         //printf("Main connection recv failed : %d\n", WSAGetLastError());
-        #elseif __linux__
+        #elif __linux__
         perror("Main connection recv failed");
         #endif
     }
