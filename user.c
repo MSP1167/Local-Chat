@@ -5,6 +5,15 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#ifdef __linux__
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+void strcpy_s(char* dest, int size, const char* src) {
+#pragma GCC diagnostic pop
+    // TODO: Actually implement this, but for now alias to strcpy
+    strcpy(dest, src);
+}
+#endif
+
 User* create_user(const char* uuid, const char* username, bool online) {
     User* user = malloc(sizeof(User));
 
@@ -46,5 +55,9 @@ void print_user(User* user) {
     printf("\tuuid    : %s\n", user->uuid);
     printf("\tusername: %s\n", user->username);
     printf("\tonline  : %d\n", user->online);
+    #ifdef _WIN32
     printf("\tlastSeen: %lld\n", user->lastSeen);
+    #else
+    printf("\tlastSeen: %ld\n", user->lastSeen);
+    #endif
 }

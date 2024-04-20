@@ -27,7 +27,7 @@ void log_message(const char *message) {
     }
 
     mvwprintw(log_win, log_line, 1, "%.*s", max_x - 2, message); // Print within borders
-    printf("%s\n", message);
+    //printf("%s\n", message);
     log_line++;
 
     box(log_win, 0, 0);

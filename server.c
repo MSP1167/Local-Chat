@@ -1,7 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
+#ifdef _WIN32
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#elif __linux__
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#endif
 #include <pthread.h>
 #include <string.h>
 #include <stdbool.h>
@@ -21,7 +28,7 @@
 typedef struct main_thread_struct {
     SOCKET* socket_desc;
     struct sockaddr_in client;
-    BOOL should_exit;
+    bool should_exit;
     pthread_mutex_t mutex;
 } main_thread_struct;
 
@@ -31,7 +38,7 @@ int server_port;
 
 void* handle_main_connection_write(void* main_thread_args) {
     main_thread_struct *args = (main_thread_struct*)main_thread_args;
-    SOCKET sock = *(args->socket_desc);
+    int sock = *(args->socket_desc);
     // struct sockaddr_in client = args->client;
     int last_message_read = 0;
 
@@ -74,7 +81,7 @@ void* handle_main_connection_write(void* main_thread_args) {
             pthread_mutex_unlock(&clientMessages->mutex);
 
             pthread_mutex_lock(&args->mutex);
-            printf("Sending Message %s\n", message);
+            //printf("Sending Message %s\n", message);
             if (send(sock, message, strlen(message), 0) < 0) {
                 log_message("Sent Message");
                 free(message);
@@ -118,7 +125,7 @@ void* handle_main_connection_read(void* main_thread_args) {
                 pthread_mutex_unlock(&args->mutex);
                 closesocket(sock);
                 // free(args->socket_desc);
-                printf("Exiting Main Connection Read Thread...\n");
+                //printf("Exiting Main Connection Read Thread...\n");
                 return NULL;
             }
             pthread_mutex_unlock(&args->mutex);
@@ -146,30 +153,35 @@ void* handle_main_connection_read(void* main_thread_args) {
     }
 
     if(read_size == 0) {
-        puts("Client disconnected");
+        //puts("Client disconnected");
     } else if(read_size == SOCKET_ERROR) {
-        printf("Main connection recv failed : %d\n", WSAGetLastError());
+        #ifdef _WIN32
+        //printf("Main connection recv failed : %d\n", WSAGetLastError());
+        #elseif __linux__
+        perror("Main connection recv failed");
+        #endif
     }
 
-    printf("Closing socket\n");
+    //printf("Closing socket\n");
     closesocket(sock);
     pthread_mutex_lock(&args->mutex);
-    printf("Should_exit is going on\n");
+    //printf("Should_exit is going on\n");
     args->should_exit = true;
     pthread_mutex_unlock(&args->mutex);
     //TODO: Program seems to crash after this? It exits, so idk
     pthread_exit(NULL);
-    printf("Thread should have exit!");
+    //printf("Thread should have exit!");
     return NULL;
 }
 
 void *listen_on_port_tcp(void *server_socket_pointer) {
     int server_socket = *(int*)server_socket_pointer;
-    int client_sock, c = sizeof(struct sockaddr_in);
+    int client_sock;
+    socklen_t c = sizeof(struct sockaddr_in);
     struct sockaddr_in client;
 
     while((client_sock = accept(server_socket, (struct sockaddr *)&client, &c)) != (int)INVALID_SOCKET) {
-        puts("Connection accepted");
+        //puts("Connection accepted");
 
         SOCKET* new_sock = malloc(sizeof(SOCKET));
         *new_sock = client_sock;
@@ -195,9 +207,9 @@ void *listen_on_port_tcp(void *server_socket_pointer) {
             free(main_thread_args);
             return (void*)1;
         }
-        printf("Started both threads!\n");
+        //printf("Started both threads!\n");
     }
-    printf("listen_on_port_tcp exited, this should not be!\n");
+    //printf("listen_on_port_tcp exited, this should not be!\n");
     perror("Error?");
     return 0;
 }
@@ -205,7 +217,7 @@ void *listen_on_port_tcp(void *server_socket_pointer) {
 void* handle_broadcast_connection(void* socket_desc) {
     int sock = *(int*)socket_desc;
     struct sockaddr_in si_other;
-    int slen = sizeof(si_other);
+    socklen_t slen = sizeof(si_other);
     char buffer[BUFFER_SIZE] = {0};
     int read_size;
     char log_buf[512];
@@ -218,8 +230,7 @@ void* handle_broadcast_connection(void* socket_desc) {
         log_message("Broadcast Waiting on Message");
         // Receive broadcast message
         if ((read_size = recvfrom(sock, buffer, sizeof(buffer), 0, (struct sockaddr*)&si_other, &slen)) < 0) {
-            snprintf(log_buf, sizeof(log_buf), "Broadcast recvfrom Error : %d", WSAGetLastError());
-            log_message(log_buf);
+            // Exit if we read error
             closesocket(sock);
             return NULL;
         }
@@ -240,31 +251,31 @@ void* handle_broadcast_connection(void* socket_desc) {
         }
         log_message("Got Broadcast from Other\n");
 
-        printf("Creating new socket...");
+        //printf("Creating new socket...");
         SOCKET new_sock = socket(AF_INET, SOCK_STREAM, 0);
         if (new_sock == INVALID_SOCKET) {
-            printf("Error!\nCould not create broadcast response socket!");
+            //printf("Error!\nCould not create broadcast response socket!");
             continue;
         }
-        printf("Done!\n");
+        //printf("Done!\n");
 
         struct sockaddr_in peer_addr;
         peer_addr.sin_family = AF_INET;
         peer_addr.sin_addr.s_addr = si_other.sin_addr.s_addr;
         peer_addr.sin_port = htons(senderPort);
 
-        printf("Peer IP:   %s\n", inet_ntoa(peer_addr.sin_addr));
-        printf("Peer PORT: %d\n", senderPort);
+        //printf("Peer IP:   %s\n", inet_ntoa(peer_addr.sin_addr));
+        //printf("Peer PORT: %d\n", senderPort);
 
-        printf("Connecting to server...");
+        //printf("Connecting to server...");
         // Connect to server
         if (connect(new_sock, (struct sockaddr *)&peer_addr, sizeof(peer_addr)) < 0) {
             perror("Failed connecting to server");
-            printf("Failed connecting to server");
+            //printf("Failed connecting to server");
             closesocket(sock);
             return NULL;
         }
-        printf("Done!\n");
+        //printf("Done!\n");
         log_message("Connected to new peer!");
 
         main_thread_struct* main_thread_args;
@@ -288,9 +299,9 @@ void* handle_broadcast_connection(void* socket_desc) {
             free(main_thread_args);
             return (void*)1;
         }
-        printf("Started both threads!\n");
+        //printf("Started both threads!\n");
     }
-    printf("While loop broke, ???\n");
+    //printf("While loop broke, ???\n");
     return NULL;
 }
 
@@ -305,12 +316,20 @@ void* startServer(void* _clientMessages) {
 
     // Create sockets
     if((server_socket = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET) {
-        printf("Could not create socket : %d", WSAGetLastError());
+        #ifdef _WIN32
+        //printf("Could not create socket : %d", WSAGetLastError());
+        #else
+        perror("Could not create socket");
+        #endif
     }
     if((broadcast_socket = socket(AF_INET, SOCK_DGRAM, 0)) == INVALID_SOCKET) {
-        printf("Could not create socket : %d", WSAGetLastError());
+        #ifdef _WIN32
+        //printf("Could not create socket : %d", WSAGetLastError());
+        #else
+        perror("Could not create socket");
+        #endif
     }
-    printf("Sockets created.\n");
+    //printf("Sockets created.\n");
 
     // Setup Sock Options on Broadcast Socket
     int broadcastPermission = 1;
@@ -323,7 +342,6 @@ void* startServer(void* _clientMessages) {
     int reuseSocket = 1;
     if (setsockopt(broadcast_socket, SOL_SOCKET, SO_REUSEADDR, (void*)&reuseSocket, sizeof(reuseSocket)) < 0) {
         perror("setsockopt(SO_REUSEADDR) failed");
-        printf("Could not set socket options : %d", WSAGetLastError());
         closesocket(broadcast_socket);
         exit(ERR);
     }
@@ -339,7 +357,11 @@ void* startServer(void* _clientMessages) {
 
     // Bind
     if(bind(server_socket, (struct sockaddr *)&server, sizeof(server)) == SOCKET_ERROR) {
-        printf("Bind failed with error code : %d", WSAGetLastError());
+        #ifdef _WIN32
+        //printf("Bind failed with error code : %d", WSAGetLastError());
+        #else
+        perror("Bind failed with error code");
+        #endif
         exit(EXIT_FAILURE);
     }
     // Set Server Port Variable
@@ -350,10 +372,14 @@ void* startServer(void* _clientMessages) {
     }
     server_port = ntohs(server.sin_port);
     if(bind(broadcast_socket, (struct sockaddr *)&broadcast, sizeof(broadcast)) == SOCKET_ERROR) {
-        printf("Bind failed with error code : %d", WSAGetLastError());
+        #ifdef _WIN32
+        //printf("Bind failed with error code : %d", WSAGetLastError());
+        #else
+        perror("Bind failed with error code");
+        #endif
         exit(EXIT_FAILURE);
     }
-    puts("Bind done");
+    //puts("Bind done");
 
 
     // Listen to incoming connections

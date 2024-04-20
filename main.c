@@ -1,6 +1,8 @@
 #include <pthread.h>
 #include <stdlib.h>
+#ifdef _WIN32
 #include <winsock2.h>
+#endif
 #include <ncurses/ncurses.h>
 #include <stdio.h>
 #include <sys/time.h>
@@ -23,7 +25,7 @@ int main() {
 
     // Generate UUID
     uuid_str = generate_uuid_v4();
-    printf("UUID is %s\n", uuid_str);
+    //printf("UUID is %s\n", uuid_str);
 
     // Initialize ncurses
     initscr();
@@ -38,16 +40,17 @@ int main() {
     getmaxyx(stdscr, rows, cols);
     init_log_win(rows, cols);
 
+#ifdef _WIN32
     WSADATA wsa;
 
     // Initialise Winsock
-    printf("\nInitialising Winsock...");
+    //printf("\nInitialising Winsock...");
     if (WSAStartup(MAKEWORD(2,2),&wsa) != 0) {
-        printf("Failed. Error Code : %d", WSAGetLastError());
+        //printf("Failed. Error Code : %d", WSAGetLastError());
         return 1;
     }
-    printf("Initialised.\n");
-
+    //printf("Initialised.\n");
+#endif
     MessageList* _clientMessages = createMessageList(64);
     pthread_t ui_thread, server_thread;
     if (pthread_create(&ui_thread, NULL, startUI, _clientMessages) < 0) {
@@ -64,7 +67,9 @@ int main() {
 
     freeMessageList(_clientMessages);
     free(uuid_str);
+#ifdef _WIN32
     WSACleanup();
+#endif
 
     return 0;
 }

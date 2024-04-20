@@ -6,7 +6,13 @@
 #include <string.h>
 #include <sys/time.h>
 #include <time.h>
+#ifdef _WIN32
 #include <winsock2.h>
+#elif __linux__
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#endif
 #include <unistd.h>
 
 #include "ui.h"
@@ -16,7 +22,6 @@
 #include "userlist.h"
 #include "global.h"
 #include "log.h"
-
 
 #define MAX_MESSAGES 100
 #define MAX_USERS    50
@@ -55,7 +60,7 @@ void sendBroadcast() {
     broadcastAddr.sin_port = htons(BROADCAST_PORT);
 
     char message[64];
-    sprintf_s(message, sizeof(message), "%s:%d", uuid_str, server_port);
+    sprintf(message, "%s:%d", uuid_str, server_port);
 
     if (sendto(sock, message, sizeof(message), 0, (struct sockaddr *)&broadcastAddr, sizeof(broadcastAddr)) < 0) {
         perror("Failed to send port");
@@ -366,7 +371,7 @@ void* startUI(void* _clientMessages) {
                 strftime(time_now, MAX_TIME_LENGTH, TIME_FORMAT_STR, localtime(&now));
                 strncpy(message.time, time_now, MAX_TIME_LENGTH);
                 strncpy(message.uuid, generate_uuid_v4(), MAX_UUID_LENGTH);
-                print_message(&message);
+                //print_message(&message);
                 addMessageListItem(clientMessages, message);
                 strncpy(messages[message_count], str, MAX_MESSAGE_LENGTH);
                 message_count = (message_count + 1) % MAX_MESSAGES; // Ensure we don't go out of bounds
@@ -383,7 +388,7 @@ void* startUI(void* _clientMessages) {
             }
         }
     }
-    printf("Exiting...\n");
+    //printf("Exiting...\n");
 
     // Cleanup
     del_panel(msg_panel);
