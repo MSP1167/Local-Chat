@@ -82,13 +82,16 @@ void windows_broadcast(const char* message, SOCKET sock) {
                             broadcastAddr.sin_addr.s_addr = (sockaddr_ipv4->sin_addr.s_addr | ~mask); // Calculate broadcast address
                             broadcastAddr.sin_port = htons(BROADCAST_PORT);
 
-                            if (sendto(sock, message, strlen(message), 0, (struct sockaddr *)&broadcastAddr, sizeof(broadcastAddr)) < 0) {
-                                perror("Failed to send port");
-                                break;
-                            }
-
                             snprintf(log_buf, sizeof(log_buf), "\tto %s:%d", inet_ntoa(broadcastAddr.sin_addr), BROADCAST_PORT);
                             log_message(log_buf);
+
+                            if (sendto(sock, message, strlen(message), 0, (struct sockaddr *)&broadcastAddr, sizeof(broadcastAddr)) < 0) {
+                                log_message("FAIL");
+                                //perror("Failed to send port");
+                                break;
+                            }
+                            log_message("SUCCESS");
+
                             break;
                         }
                         prefix = prefix->Next;
@@ -124,7 +127,7 @@ void sendBroadcast() {
 
     char message[64] = {0};
     sprintf(message, "%s:%d", uuid_str, server_port);
-    printf("Sending message of %s\n", message);
+    //printf("Sending message of %s\n", message);
 #ifdef _WIN32
     windows_broadcast(message, sock);
 #else
