@@ -242,7 +242,7 @@ void updateChatBox(MessageList* clientMessages, WINDOW* chatWindow) {
         }
         else if (current_message.id == 31) {
             struct tm time = convert_string_to_time(current_message.time);
-            mvwprintw(chatWindow, i, 1, "(%d-%02d-%02d %02d:%02d:%02d) User %s Left with Message: %s", time.tm_year + 1900, time.tm_mon + 1, time.tm_mday, time.tm_hour, time.tm_min, time.tm_sec, current_message.username, displayMessage);
+            mvwprintw(chatWindow, i, 1, "(%d-%02d-%02d %02d:%02d:%02d) User %s Left", time.tm_year + 1900, time.tm_mon + 1, time.tm_mday, time.tm_hour, time.tm_min, time.tm_sec, current_message.username);
             i++;
         }
 
