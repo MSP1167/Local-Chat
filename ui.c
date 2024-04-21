@@ -122,7 +122,7 @@ void sendBroadcast() {
         return;
     }
 
-    char message[128];
+    char message[64] = {0};
     sprintf(message, "%s:%d", uuid_str, server_port);
     printf("Sending message of %s\n", message);
 #ifdef _WIN32
@@ -154,7 +154,7 @@ void sendBroadcast() {
             broadcastAddr.sin_addr = ipv4->sin_addr;
             broadcastAddr.sin_port = htons(BROADCAST_PORT);
 
-            if (sendto(sock, message, sizeof(message), 0, (struct sockaddr *)&broadcastAddr, sizeof(broadcastAddr)) < 0) {
+            if (sendto(sock, message, strlen(message), 0, (struct sockaddr *)&broadcastAddr, sizeof(broadcastAddr)) < 0) {
                 perror("Failed to send port");
             }
 
