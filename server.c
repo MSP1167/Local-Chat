@@ -231,6 +231,7 @@ void* handle_broadcast_connection(void* socket_desc) {
         // Receive broadcast message
         if ((read_size = recvfrom(sock, buffer, sizeof(buffer), 0, (struct sockaddr*)&si_other, &slen)) < 0) {
             // Exit if we read error
+            perror("Broadcast Recv Error");
             closesocket(sock);
             return NULL;
         }
@@ -240,7 +241,7 @@ void* handle_broadcast_connection(void* socket_desc) {
 
         char* senderUUID = strtok(buffer, ":");
         int senderPort = atoi(strtok(NULL, ":"));
-        snprintf(log_buf, sizeof(log_buf), "Got UUID: %s\nPORT: %d\n", senderUUID, senderPort);
+        snprintf(log_buf, sizeof(log_buf), "Got UUID: %s | PORT: %d\n", senderUUID, senderPort);
         log_message(log_buf);
 
         if (strcmp(senderUUID, uuid_str) == 0) {
@@ -254,7 +255,7 @@ void* handle_broadcast_connection(void* socket_desc) {
         //printf("Creating new socket...");
         SOCKET new_sock = socket(AF_INET, SOCK_STREAM, 0);
         if (new_sock == INVALID_SOCKET) {
-            //printf("Error!\nCould not create broadcast response socket!");
+            log_message("Could not create com socket!");
             continue;
         }
         //printf("Done!\n");
@@ -271,9 +272,7 @@ void* handle_broadcast_connection(void* socket_desc) {
         // Connect to server
         if (connect(new_sock, (struct sockaddr *)&peer_addr, sizeof(peer_addr)) < 0) {
             perror("Failed connecting to server");
-            //printf("Failed connecting to server");
-            closesocket(sock);
-            return NULL;
+            continue;
         }
         //printf("Done!\n");
         log_message("Connected to new peer!");

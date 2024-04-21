@@ -6,15 +6,18 @@
 #include <string.h>
 #include <sys/time.h>
 #include <time.h>
+#define IFA_BROADADDR
 #ifdef _WIN32
 #include <winsock2.h>
+#include <iphlpapi.h>
 #elif __linux__
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <ifaddrs.h>
 #endif
 #include <sys/types.h>
-#include <ifaddrs.h>
+
 #include <unistd.h>
 
 #include "ui.h"
@@ -28,9 +31,6 @@
 #define MAX_MESSAGES 100
 #define MAX_USERS    50
 
-#define BROADCAST_SELF
-#define BROADCAST_IP_SELF "127.255.255.255"
-#define BROADCAST_IP "127.255.255.255"
 #define BROADCAST_PORT 8081
 
 extern int server_port;
@@ -39,13 +39,77 @@ extern WINDOW* log_win;
 UserList* userList;
 
 int screenRows, screenCols;
+#ifdef _WIN32
+
+// Windows Jank :(
+void windows_broadcast(const char* message, SOCKET sock) {
+    DWORD dwRetVal = 0;
+    ULONG outBufLen = 15000;
+    PIP_ADAPTER_ADDRESSES pAddresses = NULL, pCurrAddresses = NULL;
+    PIP_ADAPTER_UNICAST_ADDRESS pUnicast = NULL;
+    char log_buf[512];
+
+    pAddresses = (IP_ADAPTER_ADDRESSES *) malloc(outBufLen);
+    if (pAddresses == NULL) {
+        printf("Memory allocation failed for IP_ADAPTER_ADDRESSES struct\n");
+        return;
+    }
+
+    // Make an initial call to GetAdaptersAddresses to get the necessary size into the outBufLen variable
+    if (GetAdaptersAddresses(AF_UNSPEC, GAA_FLAG_INCLUDE_PREFIX, NULL, pAddresses, &outBufLen) == ERROR_BUFFER_OVERFLOW) {
+        free(pAddresses);
+        pAddresses = (IP_ADAPTER_ADDRESSES *) malloc(outBufLen);
+        if (pAddresses == NULL) {
+            printf("Memory allocation failed for IP_ADAPTER_ADDRESSES struct\n");
+            return;
+        }
+    }
+
+    if ((dwRetVal = GetAdaptersAddresses(AF_INET, GAA_FLAG_INCLUDE_PREFIX, NULL, pAddresses, &outBufLen)) == NO_ERROR) {
+        snprintf(log_buf, sizeof(log_buf), "Sent Broadcast %s", message);
+        log_message(log_buf);
+        for (pCurrAddresses = pAddresses; pCurrAddresses != NULL; pCurrAddresses = pCurrAddresses->Next) {
+            for (pUnicast = pCurrAddresses->FirstUnicastAddress; pUnicast != NULL; pUnicast = pUnicast->Next) {
+                if (pUnicast->Address.lpSockaddr->sa_family == AF_INET) { // Check for IPv4 addresses only
+                    struct sockaddr_in *sockaddr_ipv4 = (struct sockaddr_in *) pUnicast->Address.lpSockaddr;
+
+                    IP_ADAPTER_PREFIX *prefix = pCurrAddresses->FirstPrefix;
+                    while (prefix) {
+                        if (prefix->Address.lpSockaddr->sa_family == AF_INET && prefix->PrefixLength <= 32) {
+                            ULONG mask = 0xFFFFFFFF >> (32 - prefix->PrefixLength);
+                            struct sockaddr_in broadcastAddr;
+                            broadcastAddr.sin_family = AF_INET;
+                            broadcastAddr.sin_addr.s_addr = (sockaddr_ipv4->sin_addr.s_addr | ~mask); // Calculate broadcast address
+                            broadcastAddr.sin_port = htons(BROADCAST_PORT);
+
+                            if (sendto(sock, message, strlen(message), 0, (struct sockaddr *)&broadcastAddr, sizeof(broadcastAddr)) < 0) {
+                                perror("Failed to send port");
+                                break;
+                            }
+
+                            snprintf(log_buf, sizeof(log_buf), "\tto %s:%d", inet_ntoa(broadcastAddr.sin_addr), BROADCAST_PORT);
+                            log_message(log_buf);
+                            break;
+                        }
+                        prefix = prefix->Next;
+                    }
+                }
+            }
+        }
+    } else {
+        printf("GetAdaptersAddresses failed with error: %ld\n", dwRetVal);
+    }
+
+    if (pAddresses) {
+        free(pAddresses);
+    }
+}
+#endif
 
 void sendBroadcast() {
     log_message("Sending Broadcast...");
     SOCKET sock;
-    struct sockaddr_in broadcastAddr;
     int broadcastPermission = 1;
-    char log_buf[512];
 
     if ((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == INVALID_SOCKET) {
         perror("Failed to create socket for broadcast");
@@ -58,11 +122,17 @@ void sendBroadcast() {
         return;
     }
 
-    char message[64];
+    char message[128];
     sprintf(message, "%s:%d", uuid_str, server_port);
-
+    printf("Sending message of %s\n", message);
+#ifdef _WIN32
+    windows_broadcast(message, sock);
+#else
+    char log_buf[512];
     struct ifaddrs *ifaddr;
     int family;
+
+    struct sockaddr_in broadcastAddr;
 
     getifaddrs(&ifaddr);
 
@@ -75,11 +145,11 @@ void sendBroadcast() {
 
         // Only do IPv4 for now
         if (family == AF_INET) {
-            memset(&broadcastAddr, 0, sizeof(broadcastAddr));
             struct sockaddr_in *ipv4 = (struct sockaddr_in *)ifa->ifa_broadaddr;
 
             if (ipv4 == NULL) continue;
 
+            memset(&broadcastAddr, 0, sizeof(broadcastAddr));
             broadcastAddr.sin_family = AF_INET;
             broadcastAddr.sin_addr = ipv4->sin_addr;
             broadcastAddr.sin_port = htons(BROADCAST_PORT);
@@ -93,6 +163,7 @@ void sendBroadcast() {
         }
     }
     freeifaddrs(ifaddr);
+#endif
     closesocket(sock);
 }
 

@@ -4,24 +4,33 @@
 # @file
 # @version 0.1
 
-CFLAGS = -g -Wall -Werror -Wextra -Wpedantic -Wvla -Wnull-dereference -Wswitch-enum
-CLIBS  = -lpthread -lpanelw -lncursesw -DNCURSES_STATIC
+CFLAGS   := -g -Wall -Werror -Wextra -Wpedantic -Wvla -Wnull-dereference -Wswitch-enum
+CLIBS    := -lpthread -lpanelw -lncursesw -DNCURSES_STATIC
+ifeq '$(findstring ;,$(PATH))' ';'
+    UNAME := Windows
+else
+    UNAME := $(shell uname 2>/dev/null || echo Unknown)
+    UNAME := $(patsubst CYGWIN%,Cygwin,$(UNAME))
+    UNAME := $(patsubst MSYS%,MSYS,$(UNAME))
+    UNAME := $(patsubst MINGW%,MSYS,$(UNAME))
+endif
 
+ifeq ($(UNAME), Windows)
+	CLIBS += -lws2_32 -liphlpapi
+else ifeq ($(UNAME), MSYS)
+	CLIBS += -lws2_32 -liphlpapi
+endif
 
 all: app
 
-ifeq ($(OS),Windows_NT)
-	CLIBS += -lws2_32
-endif
-
 app: server.o ui.o main.c global.o
-	gcc $(CFLAGS) main.c -o app message.o user.o server.o ui.o uuid.o messagelist.o userlist.o log.o global.o $(CLIBS)
+	gcc $(CFLAGS) main.c -o app message.o user.o server.o ui.o uuid.o messagelist.o userlist.o log.o global.o $(CINCLUDE) $(CLIBS)
 
 server.o: server.c message.o messagelist.o log.o server.h global.h
 	gcc $(CFLAGS) -c -o server.o server.c
 
 ui.o: ui.c log.o ui.h user.o userlist.o message.o messagelist.o global.h
-	gcc $(CFLAGS) -c ui.c -o ui.o
+	gcc $(CFLAGS) $(CINCLUDE) -c ui.c -o ui.o
 
 message.o: message.c uuid.o message.h
 	gcc $(CFLAGS) -c message.c -o message.o
