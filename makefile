@@ -53,5 +53,8 @@ log.o: log.c log.h
 global.o: global.c global.h
 	gcc $(CFLAGS) -c global.c -o global.o
 
+.PHONY: clean
+clean:
+	rm -f app server.o ui.o message.o user.o uuid.o messagelist.o userlist.o log.o global.o
 
 # end
